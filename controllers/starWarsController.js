@@ -1,16 +1,17 @@
 const axios = require('axios');
 const { getImageUrl, getSpeciesColor } = require('../utils/functions');
+const Character = require('../models/character');
 
-let people = [];
 
 async function getPeople(req, res) {
-    const { page } = req.query
+    const { page, size } = req.query
     let currentPage = page || 1
-
+    let pageSize = size || 10
+    const skip = (currentPage - 1) * pageSize;
     try {
-        const response = await axios.get(`https://swapi.dev/api/people?page=${currentPage}`);
-        people = response.data.results;
-        const characterDataPromises = people?.map(async (character) => {
+        const response = await Character.find().skip(skip).limit(pageSize);;
+
+        const characterDataPromises = response?.map(async (character) => {
             const { species } = character
             try {
                 let imageUrl = await getImageUrl()
@@ -18,10 +19,10 @@ async function getPeople(req, res) {
                 // if(species?.length > 0){
                 //     specieColor = await getSpeciesColor(species[0])
                 // }
-                return { ...character, image: imageUrl };
+                return { ...character.toObject(), image: imageUrl };
             } catch (error) {
                 console.error(error);
-                return { ...character, image: null };
+                return { ...character.toObject(), image: null };
             }
         });
 
@@ -35,9 +36,18 @@ async function getPeople(req, res) {
 
 async function addPeople(req, res) {
     try {
-        const newPerson = req.body;
-        people.push(newPerson)
-        res.status(201).json(newPerson);
+        //If add new character in the end of an array
+        // const newCharacter = await Character.create(req.body);
+
+        //Add new Character in the start of an array
+        const newCharacter = req.body;
+        const existingCharacters = await Character.find();
+        const updatedCharacters = [newCharacter, ...existingCharacters];
+
+        await Character.deleteMany({});
+        await Character.insertMany(updatedCharacters);
+
+        res.status(201).json("New character added");
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' })
     }
@@ -45,23 +55,21 @@ async function addPeople(req, res) {
 
 async function updatePeople(req, res) {
     try {
-        const id = req.params.id
-        const updatePerson = req.body
-        people[id] = updatePerson
-        res.json(updatePerson)
+        await Character.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(201).json({ message:"Character Details Updated Successfully"});
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' })
     }
 }
 
 async function deletePeople(req, res) {
-    const { id } = req.body
+    const { id } = req.params
     try {
-        const deletedPerson = people.splice(id, 1);
-        people = people?.filter((item, index) => id !== index)
-        res.json(deletedPerson);
+        await Character.findByIdAndDelete(id)
+        res.status(200).json({ message: 'Character deleted successfully' });
     } catch (err) {
-        res.status(500).json({ error: 'Internal Server Error' })
+        console.log("Error deleting person: ", err)
+        res.status(404).json({ message: 'Character not found' });
     }
 }
 

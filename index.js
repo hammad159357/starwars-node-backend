@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(helmet());
 app.use(cors());
-
+require('./database/connection')();
 // Middleware for error handling
 app.use(errorHandler)
 

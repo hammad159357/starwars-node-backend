@@ -7,12 +7,11 @@ router.get('/people', StarWarsController.getPeople)
 //add new people
 router.post('/people', StarWarsController.addPeople)
 
-//update people dataS
+//update people data
 router.put('/people/:id', StarWarsController.updatePeople)
 
 //delete people data
-router.delete('/people/delete', StarWarsController.deletePeople)
-
+router.delete('/people/:id', StarWarsController.deletePeople)
 
 
 module.exports = router;
